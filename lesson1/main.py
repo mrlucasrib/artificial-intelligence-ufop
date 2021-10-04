@@ -68,7 +68,7 @@ class SecondController(Controller):
             hight_levels_command['to_buy'] = low_level_perceptions.max_n - low_level_perceptions.n
             return hight_levels_command
         else:
-            return ThirdController().command(low_level_perceptions, hight_levels_command,
+            return ThirdController().perceive(low_level_perceptions, hight_levels_command,
                                       belief_state)
 
 
@@ -79,7 +79,7 @@ class FirstController(Controller):
             hight_levels_command['to_buy'] = belief_state.min - low_level_perceptions.n
             return hight_levels_command
         else:
-            return SecondController().command(low_level_perceptions, hight_levels_command,
+            return SecondController().perceive(low_level_perceptions, hight_levels_command,
                                        belief_state)
 
 
