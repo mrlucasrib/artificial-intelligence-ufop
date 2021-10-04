@@ -1,55 +1,9 @@
-from typing import List
-
+from typing import List, Any
 import numpy as np
 import matplotlib.pyplot as plt
 from dataclasses import dataclass, field
 
-
-@dataclass
-class IntemOfSaleBehavior:
-    n: int
-    price: float
-    mu_usage: List[int]
-    sigma_usage: List[int]
-    mu_price: float
-    sigma_price: float
-    on_sale: bool
-    max_n: int
-    clock: int = field(default=0)
-
-
-@dataclass
-class AgentBeliefState:
-    average_price: float
-    cheap: float
-    low: float
-    min: int
-
-
-@dataclass
-class AgentPercepts:
-    n: int
-    price: float
-    max_n: int
-
-
-class Controller:
-    def remerber(self, low_level_perceptions: AgentPercepts, belief_state: AgentBeliefState,
-                 hight_levels_command: dict):  # -> perceptions (hight_levels_command not in a priori)
-        return self.command(low_level_perceptions, hight_levels_command, belief_state)
-
-    def command(self, low_level_perceptions, hight_levels_command,
-                belief_state) -> dict:  # -> low_level_perceptions:
-        if low_level_perceptions.n <= belief_state.low:
-            return {"to_buy": belief_state.min - low_level_perceptions.n}
-        elif low_level_perceptions.price <= belief_state.low:
-            return {"to_buy": low_level_perceptions.max_n - low_level_perceptions.n}
-        else:
-            return {"to_buy": 0}
-
-    def perceive(self, low_level_perceptions: AgentPercepts, hight_levels_command: dict,
-                 belive_state: AgentBeliefState):  # -> hl perceptions
-        return self.remerber(low_level_perceptions, belive_state, hight_levels_command)
+from lesson1.utils import IntemOfSaleBehavior, AgentPercepts, AgentBeliefState, Controller
 
 
 class Environment:
@@ -100,6 +54,35 @@ class Environment:
                              max_n=self.item_of_sale_behavior.max_n)
 
 
+class ThirdController(Controller):
+    def command(self, low_level_perceptions: AgentPercepts, hight_levels_command: dict,
+                belief_state: AgentBeliefState) -> dict:
+        hight_levels_command['to_buy'] = 0
+        return hight_levels_command
+
+
+class SecondController(Controller):
+    def command(self, low_level_perceptions: AgentPercepts, hight_levels_command: dict,
+                belief_state: AgentBeliefState) -> dict:
+        if low_level_perceptions.price <= belief_state.low:
+            hight_levels_command['to_buy'] = low_level_perceptions.max_n - low_level_perceptions.n
+            return hight_levels_command
+        else:
+            return ThirdController().command(low_level_perceptions, hight_levels_command,
+                                      belief_state)
+
+
+class FirstController(Controller):
+    def command(self, low_level_perceptions: AgentPercepts, hight_levels_command: dict,
+                belief_state: AgentBeliefState) -> dict:
+        if low_level_perceptions.n <= belief_state.low:
+            hight_levels_command['to_buy'] = belief_state.min - low_level_perceptions.n
+            return hight_levels_command
+        else:
+            return SecondController().command(low_level_perceptions, hight_levels_command,
+                                       belief_state)
+
+
 class Agent:
     """
     Classe agente
@@ -114,7 +97,7 @@ class Agent:
                                              cheap=self.percepts.price,
                                              low=0,
                                              min=self.percepts.max_n)
-        self.controller = Controller()
+        self.controller = FirstController()
         self.body = self.Body()
 
     class Body:
@@ -122,7 +105,7 @@ class Agent:
             return command
 
         def recive_stimuli(self, low_level_perceptions: AgentPercepts, hight_levels_command: dict,
-                           belive_state: AgentBeliefState, controller: Controller) -> dict:
+                           belive_state: AgentBeliefState, controller: FirstController) -> dict:
             response_command = controller.perceive(low_level_perceptions, hight_levels_command,
                                                    belive_state)
             return self.act(response_command)
